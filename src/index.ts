@@ -1,8 +1,8 @@
-import { Application } from 'probot' // eslint-disable-line no-unused-vars
+import { Application } from "probot"; // eslint-disable-line no-unused-vars
+import { onPush } from "./listeners";
+import webHookRouter from "./webhooks";
 
 export = (app: Application) => {
-  app.on('issues.opened', async (context) => {
-    const issueComment = context.issue({ body: 'Thanks for opening this issue!' })
-    await context.github.issues.createComment(issueComment)
-  });
-}
+  app.on("push", onPush);
+  app.route("/").use("/webhooks", webHookRouter);
+};

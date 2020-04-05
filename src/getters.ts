@@ -1,6 +1,6 @@
 import { WebhookPayloadPush } from "@octokit/webhooks";
 
-export function getCommitSha(payload: any) {
+export function getCommitSha(payload: any): string {
   return payload.head_commit.id;
 }
 
