@@ -6,6 +6,9 @@ import { EventEmitter } from "events";
 import simpleGit from "simple-git/promise";
 import dotenv from "dotenv";
 import fs from "fs";
+import { exec } from "child_process";
+import { promisify } from "util";
+const promisifiedExec = promisify(exec);
 dotenv.config();
 
 const GIT_WORKSPACE = `${process.env.HOME}/${process.env.WORKSPACE}`;
@@ -14,17 +17,34 @@ const gitWorkspace = simpleGit(GIT_WORKSPACE);
 const qualityGateEventEmitter = new EventEmitter();
 
 export enum ProjectType {
-  "IIB",
+  "NOTJAVA",
   "JAVA",
 }
 
-export function determineProjectType(
+export async function determineProjectType(
   context: Context<Webhooks.WebhookPayloadPush>
-): ProjectType {
+): Promise<ProjectType> {
   if (context) {
-    return ProjectType.JAVA;
+    const gitRepoPath = `${GIT_WORKSPACE}/${getters.getCommitSha(
+      context.payload
+    )}`;
+    try {
+      const { stdout, stderr } = await promisifiedExec(
+        `bash src/determineprojecttype.sh ${gitRepoPath}`
+      );
+      if(stdout.includes('JAVA')) {
+        console.log('Project type java identified');
+        
+        return ProjectType.JAVA;
+      }
+      console.log(stderr);
+    } catch (error) {
+      console.log(error);
+    }
   }
-  return ProjectType.IIB;
+  console.log('ProjectType: NOTJAVA');
+  
+  return ProjectType.NOTJAVA;
 }
 
 export function cleanWorkspace(commitSha: string) {
@@ -34,11 +54,11 @@ export function cleanWorkspace(commitSha: string) {
 
 export async function cloneCommit(payload: Webhooks.WebhookPayloadPush) {
   console.log("cloneCommitExecution");
-  
+
   const cloneUrl = getters.getCloneUrl(payload);
   const branch = getters.getBranch(payload);
   const sha = getters.getCommitSha(payload);
-  await gitWorkspace.clone(cloneUrl, sha, [
+await gitWorkspace.clone(cloneUrl, sha, [
     "--single-branch",
     `--branch=${branch}`,
     "--depth=1",
@@ -60,7 +80,7 @@ export function startSonarQubeScan(
       skipTests: true,
       "sonar.projectKey": "spring-test-jenkins",
       "sonar.host.url": process.env.SONARQUBE_URL,
-      "sonar.login": process.env.SONAR_LOGIN
+      "sonar.login": process.env.SONAR_LOGIN,
     })
     .then(() => {
       console.log("done");
@@ -82,7 +102,7 @@ export function setCommitStatus(
   commitStatus: "error" | "failure" | "pending" | "success"
 ) {
   console.log("setCommitStatusExectution");
-  
+
   const sha = getters.getCommitSha(payloadContext.payload);
   const state = commitStatus;
   const description = "CI Test - Check quality of code";
