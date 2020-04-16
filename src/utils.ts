@@ -8,6 +8,7 @@ import dotenv from "dotenv";
 import fs from "fs";
 import { exec } from "child_process";
 import { promisify } from "util";
+import { ensureProjectExists } from "./sonarapi";
 const promisifiedExec = promisify(exec);
 dotenv.config();
 
@@ -32,9 +33,9 @@ export async function determineProjectType(
       const { stdout, stderr } = await promisifiedExec(
         `bash src/determineprojecttype.sh ${gitRepoPath}`
       );
-      if(stdout.includes('JAVA')) {
-        console.log('Project type java identified');
-        
+      if (stdout.includes("JAVA")) {
+        console.log("Project type java identified");
+
         return ProjectType.JAVA;
       }
       console.log(stderr);
@@ -42,8 +43,8 @@ export async function determineProjectType(
       console.log(error);
     }
   }
-  console.log('ProjectType: NOTJAVA');
-  
+  console.log("ProjectType: NOTJAVA");
+
   return ProjectType.NOTJAVA;
 }
 
@@ -58,7 +59,7 @@ export async function cloneCommit(payload: Webhooks.WebhookPayloadPush) {
   const cloneUrl = getters.getCloneUrl(payload);
   const branch = getters.getBranch(payload);
   const sha = getters.getCommitSha(payload);
-await gitWorkspace.clone(cloneUrl, sha, [
+  await gitWorkspace.clone(cloneUrl, sha, [
     "--single-branch",
     `--branch=${branch}`,
     "--depth=1",
@@ -75,16 +76,23 @@ export function startSonarQubeScan(
     cwd: `${GIT_WORKSPACE}/${commitSha}`,
   });
 
-  mvn
-    .execute(["clean", "install", "sonar:sonar"], {
-      skipTests: true,
-      "sonar.projectKey": "spring-test-jenkins",
-      "sonar.host.url": process.env.SONARQUBE_URL,
-      "sonar.login": process.env.SONAR_LOGIN,
-    })
-    .then(() => {
-      console.log("done");
-    });
+  const projectKey = generateProjectKey(context);
+  const projectName = getters.getRepoName(context.payload);
+
+  ensureProjectExists(projectKey, projectName).then((success) => {
+    if (success) {
+      mvn
+        .execute(["clean", "install", "sonar:sonar"], {
+          skipTests: true,
+          "sonar.projectKey": projectKey,
+          "sonar.host.url": process.env.SONARQUBE_URL,
+          "sonar.login": process.env.SONAR_LOGIN,
+        })
+        .then(() => {
+          console.log("done");
+        });
+      }
+  });
 }
 
 export function updateQualityGateStatus(payload: any) {
@@ -137,4 +145,8 @@ function createGitWorkspace() {
   if (!fs.existsSync(GIT_WORKSPACE)) {
     fs.mkdirSync(GIT_WORKSPACE, { recursive: true });
   }
+}
+
+function generateProjectKey(context: Context<Webhooks.WebhookPayloadPush>) {
+  return getters.getRepoName(context.payload).trim();
 }
