@@ -1,7 +1,7 @@
 import fetch from "node-fetch";
 
-const apiBaseUrl = "http://localhost:9000/api";
-const token = "127d29d87aa9c53c3e3e1bcf3bc8082dec10e75b";
+const apiBaseUrl = `${process.env.SONARQUBE_URL}/api`;
+const token = process.env.SONAR_LOGIN;
 const encodedToken = new Buffer(token + ":").toString("base64");
 
 export async function projectExists(projectKey: string) {
