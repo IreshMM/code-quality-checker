@@ -19,5 +19,6 @@ export async function onPush(context: Context<Webhooks.WebhookPayloadPush>) {
 
 export function onSonarQubeWebhook(req: Request, res: Response) {
   utils.updateQualityGateStatus(req.body);
+  utils.cleanWorkspace(req.body.revision);
   res.sendStatus(200);
 }
