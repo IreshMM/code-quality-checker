@@ -137,7 +137,7 @@ export function addWebhookEventListeners(
   });
 
   qualityGateEventEmitter.once(`${sha}_failure`, () => {
-    setCommitStatus(context, "success");
+    setCommitStatus(context, "failure");
   });
 }
 
