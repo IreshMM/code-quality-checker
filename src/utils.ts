@@ -40,7 +40,7 @@ export async function determineProjectType(
     )}`;
     try {
       const { stdout, stderr } = await promisifiedExec(
-        `bash src/determineprojecttype.sh ${gitRepoPath}`
+        `bash lib/determineprojecttype.sh ${gitRepoPath}`
       );
       if (stdout.includes("JAVA")) {
         console.log("Project type java identified");
