@@ -9,6 +9,7 @@ import fs from "fs";
 import { exec } from "child_process";
 import { promisify } from "util";
 import { ensureProjectExists } from "./sonarapi";
+import { startSonarQubeScanViaJenkins } from "./jenkinsapi";
 const promisifiedExec = promisify(exec);
 dotenv.config();
 
@@ -26,6 +27,14 @@ export async function determineProjectType(
   context: Context<Webhooks.WebhookPayloadPush>
 ): Promise<ProjectType> {
   if (context) {
+    const repoName = getters.getRepoName(context.payload);
+    if (repoName.toLocaleLowerCase().includes("java")) {
+      return ProjectType.JAVA;
+    }
+
+    await cleanWorkspace(getters.getCommitSha(context.payload));
+    await cloneCommit(context.payload);
+
     const gitRepoPath = `${GIT_WORKSPACE}/${getters.getCommitSha(
       context.payload
     )}`;
@@ -71,27 +80,21 @@ export function startSonarQubeScan(
 ) {
   setCommitStatus(context, "pending");
 
-  const commitSha = getters.getCommitSha(context.payload);
-  const mvn = require("maven").create({
-    cwd: `${GIT_WORKSPACE}/${commitSha}`,
-  });
-
   const projectKey = generateProjectKey(context);
   const projectName = getters.getRepoName(context.payload);
+  const gitHubRepoUrl = getters.getCloneUrl(context.payload);
+  const branch = getters.getBranch(context.payload);
 
   ensureProjectExists(projectKey, projectName).then((success) => {
     if (success) {
-      mvn
-        .execute(["clean", "install", "sonar:sonar"], {
-          skipTests: true,
-          "sonar.projectKey": projectKey,
-          "sonar.host.url": process.env.SONARQUBE_URL,
-          "sonar.login": process.env.SONAR_LOGIN,
-        })
-        .then(() => {
-          console.log("done");
-        });
-      }
+      startSonarQubeScanViaJenkins(gitHubRepoUrl, branch, projectKey, (err, data) => {
+        if (!err) {
+          console.log(data);
+          return;
+        }
+        console.log(err);
+      });
+    }
   });
 }
 
