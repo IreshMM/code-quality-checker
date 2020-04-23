@@ -64,11 +64,21 @@ export function cleanWorkspace(commitSha: string) {
 
 export async function cloneCommit(payload: Webhooks.WebhookPayloadPush) {
   console.log("cloneCommitExecution");
+  const GITHUB_LOGIN = process.env.GITHUB_LOGIN;
+  const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 
-  const cloneUrl = getters.getCloneUrl(payload);
+  let remoteUrl;
+  if (GITHUB_LOGIN && GITHUB_TOKEN) {
+    const repoOwner = getters.getOwner(payload);
+    const repoName = getters.getRepoName(payload);
+    remoteUrl = `https://${GITHUB_LOGIN}:${GITHUB_TOKEN}@github.com/${repoOwner}/${repoName}`;
+  } else {
+    remoteUrl = getters.getCloneUrl(payload);
+  }
+
   const branch = getters.getBranch(payload);
   const sha = getters.getCommitSha(payload);
-  await gitWorkspace.clone(cloneUrl, sha, [
+  await gitWorkspace.clone(remoteUrl, sha, [
     "--single-branch",
     `--branch=${branch}`,
     "--depth=1",
@@ -87,13 +97,18 @@ export function startSonarQubeScan(
 
   ensureProjectExists(projectKey, projectName).then((success) => {
     if (success) {
-      startSonarQubeScanViaJenkins(gitHubRepoUrl, branch, projectKey, (err, data) => {
-        if (!err) {
-          console.log(data);
-          return;
+      startSonarQubeScanViaJenkins(
+        gitHubRepoUrl,
+        branch,
+        projectKey,
+        (err, data) => {
+          if (!err) {
+            console.log(data);
+            return;
+          }
+          console.log(err);
         }
-        console.log(err);
-      });
+      );
     }
   });
 }
