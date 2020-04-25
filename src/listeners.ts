@@ -6,12 +6,14 @@ import { Request, Response } from "express";
 export async function onPush(context: Context<Webhooks.WebhookPayloadPush>) {
   console.log("onPushExecution");
 
-  if ((await utils.determineProjectType(context)) === utils.ProjectType.JAVA) {
-    console.log("insideProjectTypeJava");
+  utils.determineProjectType(context).then((projectType: utils.ProjectType) => {
+    if (projectType == utils.ProjectType.JAVA) {
+      console.log("insideProjectTypeJava");
 
-    utils.addWebhookEventListeners(context);
-    utils.startSonarQubeScan(context);
-  }
+      utils.addWebhookEventListeners(context);
+      utils.startSonarQubeScan(context);
+    }
+  });
 }
 
 export function onSonarQubeWebhook(req: Request, res: Response) {
