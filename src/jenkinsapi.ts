@@ -7,6 +7,8 @@ const JENKINS_LOGIN = process.env.JENKINS_LOGIN;
 const JENKINS_PASS = process.env.JENKINS_PASS;
 const JENKINS_PROJECT = process.env.JENKINS_PROJECT || "JavaCodeQualityChecker";
 const JENKINS_SUBPATH = process.env.JENKINS_SUBPATH;
+const JENKINS_CONFIG_COMMIT_STATUSES = process.env.JENKINS_CONFIG_COMMIT_STATUSES || 'job.xml';
+const JENKINS_CONFIG_PULL_REQUEST = process.env.JENKINS_CONFIG_PULL_REQUEST;
 
 const JENKINS_ACCESS_URL = `http://${JENKINS_LOGIN}:${JENKINS_PASS}@${JENKINS_HOST}:${JENKINS_PORT}/${
   JENKINS_SUBPATH ? JENKINS_SUBPATH : ""
@@ -23,7 +25,7 @@ export function startSonarQubeScanViaJenkins(
   sonarProjectKey: string,
   callBack?: (err: Error, data: any) => void
 ) {
-  ensureJobExistsAndContinue(JENKINS_PROJECT, () => {
+  ensureJobExistsAndContinue(JENKINS_CONFIG_COMMIT_STATUSES, JENKINS_PROJECT, () => {
     jenkinsInstance.job.build(
       {
         name: JENKINS_PROJECT,
@@ -39,6 +41,7 @@ export function startSonarQubeScanViaJenkins(
 }
 
 export function ensureJobExistsAndContinue(
+  jobConfigFile: string,
   projectName: string,
   continueCallBack: () => void
 ) {
@@ -48,7 +51,7 @@ export function ensureJobExistsAndContinue(
     if (!exists && !error) {
       console.log('JobDoesNotExist');
       
-      createJob(projectName, (created) => {
+      createJob(jobConfigFile, projectName, (created) => {
         if (created) {
           continueCallBack();
         }
@@ -59,8 +62,8 @@ export function ensureJobExistsAndContinue(
   });
 }
 
-function createJob(projectName: string, callBack: (created: Boolean) => void) {
-  fs.readFile("./jobconfig/job.xml", "utf8", (err, data) => {
+function createJob(jobConfigFile: string, projectName: string, callBack: (created: Boolean) => void) {
+  fs.readFile(`./jobconfig/${jobConfigFile}`, "utf8", (err, data) => {
     if (!err) {
       jenkinsInstance.job.create(projectName, data, (err) => {
         if (!err) {
