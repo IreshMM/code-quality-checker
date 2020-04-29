@@ -1,0 +1,87 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<flow-definition plugin="workflow-job@2.38">
+  <actions>
+    <org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobAction plugin="pipeline-model-definition@1.6.0"/>
+    <org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction plugin="pipeline-model-definition@1.6.0">
+      <jobProperties/>
+      <triggers/>
+      <parameters/>
+      <options/>
+    </org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction>
+  </actions>
+  <description>Runs with given parameters against a GitHub repository to check quality of the code. Only valid for Java projects.</description>
+  <keepDependencies>false</keepDependencies>
+  <properties>
+    <hudson.model.ParametersDefinitionProperty>
+      <parameterDefinitions>
+        <hudson.model.StringParameterDefinition>
+          <name>gitHubRepoUrl</name>
+          <description>Git clone URL of the repository to run the build against.</description>
+          <defaultValue></defaultValue>
+          <trim>false</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>baseBranch</name>
+          <description>The branch to check code quality for</description>
+          <defaultValue></defaultValue>
+          <trim>false</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>headBranch</name>
+          <description>Head branch of the pull request</description>
+          <defaultValue></defaultValue>
+          <trim>false</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>pullNumber</name>
+          <description>Key number of the pull request within the repository, assigned by GitHub automatically.</description>
+          <defaultValue></defaultValue>
+          <trim>false</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>sonarProjectKey</name>
+          <description>Project key value of the corresponding SonarQube Project.</description>
+          <defaultValue></defaultValue>
+          <trim>false</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>sonarHostUrl</name>
+          <description>URL of the sonarqube instance</description>
+          <defaultValue>http://sonarqube:9000</defaultValue>
+          <trim>false</trim>
+        </hudson.model.StringParameterDefinition>
+      </parameterDefinitions>
+    </hudson.model.ParametersDefinitionProperty>
+  </properties>
+  <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@2.80">
+    <script>
+            pipeline {
+                agent any
+
+                stages {
+                    stage(&apos;Checkout Code&apos;) {
+                        steps {
+                            checkout([$class: &apos;GitSCM&apos;, branches: [[name: &quot;*/${params.headBranch}&quot;]], doGenerateSubmoduleConfigurations: false, extensions: [[$class: &apos;CloneOption&apos;, noTags: true, reference: &apos;&apos;, shallow: false]], submoduleCfg: [], userRemoteConfigs: [[credentialsId: &apos;GITHUB_LOGIN&apos;, url: params.gitHubRepoUrl]]])
+                        }
+                    }
+                    
+                    stage(&apos;SonarQube PR Analysis&apos;) {
+                            environment { 
+                                SONAR_LOGIN = credentials(&apos;SONAR_LOGIN&apos;) 
+                            }
+                            tools {
+                                maven &apos;MAVEN_INSTALLATION&apos;
+                            }
+                            steps {
+                                sh &quot;mvn sonar:sonar -Dsonar.host.url=${params.sonarHostUrl} -Dsonar.login=$SONAR_LOGIN -Dsonar.projectKey=${params.sonarProjectKey} -Dsonar.pullrequest.key=${params.pullNumber} -Dsonar.pullrequest.branch=${params.headBranch} -Dsonar.pullrequest.base=${params.baseBranch}&quot;
+                            } 
+                    }
+                }
+            }
+    </script>
+    <sandbox>true</sandbox>
+  </definition>
+  <triggers/>
+  <quietPeriod>0</quietPeriod>
+  <disabled>false</disabled>
+</flow-definition>
