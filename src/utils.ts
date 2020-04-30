@@ -24,7 +24,7 @@ export enum ProjectType {
 }
 
 export async function determineProjectType(
-  context: Context<Webhooks.WebhookPayloadPush>
+  context: Context<Webhooks.WebhookPayloadPush> | Context<Webhooks.WebhookPayloadPullRequest>
 ): Promise<ProjectType> {
   if (context) {
     const repoName = getters.getRepoName(context.payload);
@@ -62,7 +62,7 @@ export function cleanWorkspace(commitSha: string) {
   console.log(`${GIT_WORKSPACE}/${commitSha} is cleaned`);
 }
 
-export async function cloneCommit(payload: Webhooks.WebhookPayloadPush) {
+async function cloneCommit(payload: Webhooks.WebhookPayloadPush | Webhooks.WebhookPayloadPullRequest) {
   console.log("cloneCommitExecution");
   const GITHUB_LOGIN = process.env.GITHUB_LOGIN;
   const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
