@@ -14,14 +14,13 @@
     "probot-app"
   ],
   "scripts": {
-    "build": "tsc && npm run copy-sh",
+    "build": "tsc",
     "build:watch": "tsc && (tsc -w --preserveWatchOutput & nodemon)",
     "dev": "npm run build:watch",
     "start": "probot run ./lib/index.js",
     "lint": "standard **/*.ts --fix",
     "test": "jest && standard **/*.ts",
-    "test:watch": "jest --watch --notify --notifyMode=change --coverage",
-    "copy-sh": "cp src/*.sh lib/"
+    "test:watch": "jest --watch --notify --notifyMode=change --coverage"
   },
   "dependencies": {
     "express": "^4.17.1",
