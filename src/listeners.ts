@@ -25,14 +25,9 @@ export async function onPullRequest(context: Context<Webhooks.WebhookPayloadPull
       utils.startSonarQubePRAnalyzis(context);
     }
   })
-
-
-  
-  // setTimeout(closePullRequest.bind(null, context), 5000);
 }
 
 export function onSonarQubeWebhook(req: Request, res: Response) {
   utils.updateQualityGateStatus(req.body);
-  utils.cleanWorkspace(req.body.revision);
   res.sendStatus(200);
 }

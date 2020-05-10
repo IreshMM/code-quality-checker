@@ -1,6 +1,5 @@
 import { Context } from "probot";
 import Webhooks from "@octokit/webhooks";
-import rimraf from "rimraf";
 import * as getters from "./getters";
 import { EventEmitter } from "events";
 import dotenv from "dotenv";
@@ -30,11 +29,6 @@ export async function determineProjectType(
   }
 
   return ProjectType.NOTJAVA;
-}
-
-export function cleanWorkspace(commitSha: string) {
-  rimraf.sync(`${GIT_WORKSPACE}/${commitSha}`);
-  console.log(`${GIT_WORKSPACE}/${commitSha} is cleaned`);
 }
 
 export function startSonarQubeScan(
