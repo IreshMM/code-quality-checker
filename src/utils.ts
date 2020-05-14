@@ -125,8 +125,8 @@ export function setCommitStatus(
 
   const sha = getters.getCommitSha(payloadContext.payload);
   const state = commitStatus;
-  const description = "CI Test - Check quality of code";
-  const context = "CODEQUALITY";
+  const description = "Code quality status of this revision of the branch";
+  const context = "BranchCodeQuality";
   const target_url = targetUrl;
 
   const payload = payloadContext.repo({
