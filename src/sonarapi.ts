@@ -8,8 +8,12 @@ const SONARQUBE_WEBHOOK_SECRET = process.env.SONARQUBE_WEBHOOK_SECRET!;
 
 const apiBaseUrl = `${SONARQUBE_URL}/api`;
 const encodedToken = new Buffer(SONAR_LOGIN + ":").toString("base64");
-const encodedWebhookSecret = new Buffer(SONARQUBE_WEBHOOK_SECRET).toString("base64");
-const encodedWebhookUrl = new Buffer(`${BASE_URL}/webhooks/sonarqube`).toString();
+const encodedWebhookSecret = new Buffer(SONARQUBE_WEBHOOK_SECRET).toString(
+  "base64"
+);
+const encodedWebhookUrl = new Buffer(
+  `${BASE_URL}/webhooks/sonarqube`
+).toString();
 
 export async function projectExists(projectKey: string) {
   const res = await fetch(
@@ -37,31 +41,37 @@ export async function createProject(name: string, project: string) {
   return false;
 }
 
-export async function ensureProjectExists(projectKey: string, name: string) {
-  if(!await projectExists(projectKey)) {
-    return await createProject(name, projectKey);
+export async function ensureProjectExists(
+  projectKey: string,
+  name: string,
+  settings?: { key: string; value: string }[]
+) {
+  if (!(await projectExists(projectKey))) {
+    return await createProject(name, projectKey).then(async (success) => {
+      if (success && settings) {
+        return await setSettings(projectKey, settings);
+      }
+      return false;
+    });
   }
   return true;
 }
 
 export async function addWebHookIfNotExists() {
-  if(!await webHookExists()) {
+  if (!(await webHookExists())) {
     await createWebHook();
   }
 }
 
 async function webHookExists() {
-  const res = await fetch(
-    `${apiBaseUrl}/webhooks/list`,
-    {
-      method: "post",
-      headers: { Authorization: `Basic ${encodedToken}` },
-    }
-  ).then((res) => res.json());
+  const res = await fetch(`${apiBaseUrl}/webhooks/list`, {
+    method: "post",
+    headers: { Authorization: `Basic ${encodedToken}` },
+  }).then((res) => res.json());
 
-  if(res.webhooks.length > 0) {
+  if (res.webhooks.length > 0) {
     for (let webhook of res.webhooks) {
-      if(webhook.name == SONARQUBE_WEBHOOK_NAME) {
+      if (webhook.name == SONARQUBE_WEBHOOK_NAME) {
         return true;
       }
     }
@@ -79,8 +89,31 @@ async function createWebHook() {
     }
   ).then((res) => res.json());
 
-  if(res.webhook) {
+  if (res.webhook) {
     return true;
   }
   return false;
+}
+
+async function setProperty(component: string, key: string, value: string) {
+  const statusCode = await fetch(
+    `${apiBaseUrl}/settings/set?component=${component}&key=${key}&value=${value}`,
+    {
+      method: "post",
+      headers: { Authorization: `Basic ${encodedToken}` },
+    }
+  ).then((res) => res.status);
+
+  if (statusCode == 204) return true;
+  return false;
+}
+
+async function setSettings(
+  project: string,
+  settings: { key: string; value: string }[]
+) {
+  settings.forEach((property) => {
+    setProperty(project, property.key, property.value);
+  });
+  return true;
 }
