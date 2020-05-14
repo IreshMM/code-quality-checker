@@ -3,7 +3,6 @@ import Webhooks from "@octokit/webhooks";
 import * as getters from "./getters";
 import { EventEmitter } from "events";
 import dotenv from "dotenv";
-import fs from "fs";
 import { ensureProjectExists } from "./sonarapi";
 import {
   startSonarQubeScanViaJenkins,
