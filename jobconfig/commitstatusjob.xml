@@ -61,7 +61,7 @@
                                     maven &apos;MAVEN_INSTALLATION&apos;
                                 }
                                 steps {
-                                    sh &quot;mvn clean compile sonar:sonar -Dsonar.host.url=${params.sonarHostUrl} -Dsonar.login=$SONAR_LOGIN -Dsonar.projectKey=${params.sonarProjectKey} -Dmaven.test.skip=true&quot;
+                                    sh &quot;mvn clean compile sonar:sonar -Dsonar.host.url=${params.sonarHostUrl} -Dsonar.login=$SONAR_LOGIN -Dsonar.projectKey=${params.sonarProjectKey} -Dsonar.branch.name=${params.branch} -Dmaven.test.skip=true&quot;
                                 } 
                         }
                     }
