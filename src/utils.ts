@@ -108,16 +108,18 @@ export function startSonarQubePRAnalyzis(
 export function updateQualityGateStatus(payload: any) {
   const sha = payload.revision;
   const qualityGateStatus = payload.qualityGate.status;
+  const targetUrl = payload.branch.url;
   if (qualityGateStatus == "OK") {
-    qualityGateEventEmitter.emit(`${sha}_success`);
+    qualityGateEventEmitter.emit(`${sha}_success`, targetUrl);
   } else {
-    qualityGateEventEmitter.emit(`${sha}_failure`);
+    qualityGateEventEmitter.emit(`${sha}_failure`, targetUrl);
   }
 }
 
 export function setCommitStatus(
   payloadContext: Context<Webhooks.WebhookPayloadPush>,
-  commitStatus: "error" | "failure" | "pending" | "success"
+  commitStatus: "error" | "failure" | "pending" | "success",
+  targetUrl?: string
 ) {
   console.log("setCommitStatusExectution");
 
@@ -125,12 +127,14 @@ export function setCommitStatus(
   const state = commitStatus;
   const description = "CI Test - Check quality of code";
   const context = "CODEQUALITY";
+  const target_url = targetUrl;
 
   const payload = payloadContext.repo({
     sha,
     state,
     description,
     context,
+    target_url
   });
 
   console.log(payload);
@@ -142,12 +146,12 @@ export function addWebhookEventListeners(
 ) {
   const sha = getters.getCommitSha(context.payload);
 
-  qualityGateEventEmitter.once(`${sha}_success`, () => {
-    setCommitStatus(context, "success");
+  qualityGateEventEmitter.once(`${sha}_success`, (targetUrl) => {
+    setCommitStatus(context, "success", targetUrl);
   });
 
-  qualityGateEventEmitter.once(`${sha}_failure`, () => {
-    setCommitStatus(context, "failure");
+  qualityGateEventEmitter.once(`${sha}_failure`, (target_url) => {
+    setCommitStatus(context, "failure", target_url);
   });
 }
 
