@@ -5,7 +5,14 @@ import { EventEmitter } from "events";
 import dotenv from "dotenv";
 import fs from "fs";
 import { ensureProjectExists } from "./sonarapi";
-import { startSonarQubeScanViaJenkins, startSonarQubePRAnalyzisViaJenkins } from "./jenkinsapi";
+import {
+  startSonarQubeScanViaJenkins,
+  startSonarQubePRAnalyzisViaJenkins,
+} from "./jenkinsapi";
+import {
+  WebhookPayloadPush,
+  WebhookPayloadPullRequest,
+} from "@octokit/webhooks";
 dotenv.config();
 
 const GIT_WORKSPACE = `${process.env.HOME}/${process.env.WORKSPACE}`;
@@ -23,8 +30,8 @@ export async function determineProjectType(
     | Context<Webhooks.WebhookPayloadPullRequest>
 ): Promise<ProjectType> {
   const lang = context.payload.repository.language;
-  
-  if(lang?.toLowerCase().includes('java')) {
+
+  if (lang?.toLowerCase().includes("java")) {
     return ProjectType.JAVA;
   }
 
@@ -41,7 +48,11 @@ export function startSonarQubeScan(
   const gitHubRepoUrl = getters.getCloneUrl(context.payload);
   const branch = getters.getBranch(context.payload);
 
-  ensureProjectExists(projectKey, projectName).then((success) => {
+  ensureProjectExists(
+    projectKey,
+    projectName,
+    generateSonarQubeProjectSettingsForGithubAssociation(context.payload)
+  ).then((success) => {
     if (success) {
       startSonarQubeScanViaJenkins(
         gitHubRepoUrl,
@@ -68,10 +79,14 @@ export function startSonarQubePRAnalyzis(
   const baseBranch = getters.getBaseBranch(context.payload);
   const headBranch = getters.getHeadBranch(context.payload);
   const pullRequestNumber = getters.getPullRequestNumber(context.payload);
-  
+
   console.log("Obtained details");
-  ensureProjectExists(projectKey, projectName).then((success) => {
-    if(success) {
+  ensureProjectExists(
+    projectKey,
+    projectName,
+    generateSonarQubeProjectSettingsForGithubAssociation(context.payload)
+  ).then((success) => {
+    if (success) {
       startSonarQubePRAnalyzisViaJenkins(
         gitHubRepoUrl,
         baseBranch,
@@ -79,13 +94,13 @@ export function startSonarQubePRAnalyzis(
         pullRequestNumber,
         projectKey,
         (err, data) => {
-          if(!err) {
+          if (!err) {
             console.log(data);
             return;
           }
           console.log(err);
         }
-      )
+      );
     }
   });
 }
@@ -148,4 +163,18 @@ function generateProjectKey(
     | Context<Webhooks.WebhookPayloadPullRequest>
 ) {
   return getters.getRepoName(context.payload).trim();
+}
+
+function generateSonarQubeProjectSettingsForGithubAssociation(
+  contextPayload: WebhookPayloadPush | WebhookPayloadPullRequest
+) {
+  return [
+    { key: "sonar.pullrequest.provider", value: "Github" },
+    {
+      key: "sonar.pullrequest.github.repository",
+      value: `${getters.getOwner(contextPayload)}/${getters.getRepoName(
+        contextPayload
+      )}`,
+    },
+  ];
 }
