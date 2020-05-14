@@ -15,8 +15,6 @@ import {
 } from "@octokit/webhooks";
 dotenv.config();
 
-const GIT_WORKSPACE = `${process.env.HOME}/${process.env.WORKSPACE}`;
-createGitWorkspace();
 const qualityGateEventEmitter = new EventEmitter();
 
 export enum ProjectType {
@@ -153,12 +151,6 @@ export function addWebhookEventListeners(
   qualityGateEventEmitter.once(`${sha}_failure`, (target_url) => {
     setCommitStatus(context, "failure", target_url);
   });
-}
-
-function createGitWorkspace() {
-  if (!fs.existsSync(GIT_WORKSPACE)) {
-    fs.mkdirSync(GIT_WORKSPACE, { recursive: true });
-  }
 }
 
 function generateProjectKey(
