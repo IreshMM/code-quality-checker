@@ -34,11 +34,11 @@ export async function determineProjectType(
     const repoOwner = getters.getOwner(context.payload);
     const repoName = getters.getRepoName(context.payload);
 
-    const results = context.github.search.code({
+    const results = await context.github.search.code({
       q: `java+in:file+filename:pom.xml+repo:${repoOwner}/${repoName}`
     });
 
-    console.log(results);
+    console.log(results.data);
   }
 
   return ProjectType.NOTJAVA;
