@@ -27,8 +27,11 @@ export async function determineProjectType(
     | Context<Webhooks.WebhookPayloadPullRequest>
 ): Promise<ProjectType> {
   const lang = context.payload.repository.language;
+  const repoName = getters.getRepoName(context.payload);
 
-  if (lang?.toLowerCase().includes("java")) {
+  if (repoName.toLowerCase().includes("java")) {
+    return ProjectType.JAVA;
+  } else if (lang?.toLowerCase().includes("java")) {
     return ProjectType.JAVA;
   }
 
@@ -131,7 +134,7 @@ export function setCommitStatus(
     state,
     description,
     context,
-    target_url
+    target_url,
   });
 
   console.log(payload);
