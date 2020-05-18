@@ -7,3 +7,4 @@ package-lock.json
 coverage
 lib
 .env.tester
+.vscode/
