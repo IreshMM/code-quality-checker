@@ -1,10 +1,12 @@
 import fetch from "node-fetch";
 
+const BASE_URL = process.env.BASE_URL;
+
 const SONAR_LOGIN = process.env.SONAR_LOGIN;
 const SONARQUBE_URL = process.env.SONARQUBE_URL;
-const BASE_URL = process.env.BASE_URL;
 const SONARQUBE_WEBHOOK_NAME = process.env.SONARQUBE_WEBHOOK_NAME;
 const SONARQUBE_WEBHOOK_SECRET = process.env.SONARQUBE_WEBHOOK_SECRET!;
+const SONARQUBE_DEFAULT_BRANCH = process.env.SONARQUBE_DEFAULT_BRANCH!;
 
 const apiBaseUrl = `${SONARQUBE_URL}/api`;
 const encodedToken = new Buffer(SONAR_LOGIN + ":").toString("base64");
@@ -49,6 +51,7 @@ export async function ensureProjectExists(
   if (!(await projectExists(projectKey))) {
     return await createProject(name, projectKey).then(async (success) => {
       if (success && settings) {
+        await setDefaultBranch(projectKey, SONARQUBE_DEFAULT_BRANCH);
         return await setSettings(projectKey, settings);
       }
       return false;
@@ -116,4 +119,17 @@ async function setSettings(
     setProperty(project, property.key, property.value);
   });
   return true;
+}
+
+async function setDefaultBranch(project: string, branch: string) {
+  const res = await fetch(
+    `${apiBaseUrl}/project_branches/rename?name=${branch}&project=${project}`,
+    {
+      method: "post",
+      headers: { Authorization: `Basic ${encodedToken}` },
+    }
+  );
+
+  if (res.status == 204) return true;
+  return false;
 }
