@@ -58,6 +58,49 @@ export async function onPullRequest(
         };
         utils.startSonarQubePRAnalyzis(context, pullRequest);
       }
+    });
+}
+
+export async function onInstallation(
+  context: Context<Webhooks.WebhookPayloadInstallation>
+) {
+  const repositories = context.payload.repositories;
+
+  for (let i = 0; i < repositories.length; i++) {
+    const repo = repositories[i];
+
+    const repository: Repository = {
+      name: repo.name,
+      owner: context.payload.installation.account.login,
+      cloneUrl: `https://github.com/${repo.full_name}`,
+      language: null,
+    };
+
+    utils
+      .determineProjectType(context, repository)
+      .then((projectType: utils.ProjectType) => {
+        if (projectType == utils.ProjectType.JAVA) {
+          console.log("insideProjectTypeJava");
+
+          context.github.repos
+            .getCommit({
+              owner: repository.owner,
+              repo: repository.name,
+              ref: process.env.SONARQUBE_DEFAULT_BRANCH!,
+            })
+            .then((commitPayload) => {
+              const branch: Branch = {
+                name: process.env.SONARQUBE_DEFAULT_BRANCH!,
+                // @ts-ignore
+                sha: commitPayload.data.sha,
+              };
+
+              utils.addWebhookEventListeners(context, repository, branch.sha);
+              utils.startSonarQubeScan(context, repository, branch);
+            });
+        }
+      });
+  }
 }
 
 export function onSonarQubeWebhook(req: Request, res: Response) {
