@@ -1,6 +1,4 @@
 import { Context } from "probot";
-import Webhooks from "@octokit/webhooks";
-import * as getters from "./getters";
 import { EventEmitter } from "events";
 import dotenv from "dotenv";
 import { ensureProjectExists } from "./sonarapi";
@@ -8,10 +6,9 @@ import {
   startSonarQubeScanViaJenkins,
   startSonarQubePRAnalyzisViaJenkins,
 } from "./jenkinsapi";
-import {
-  WebhookPayloadPush,
-  WebhookPayloadPullRequest,
-} from "@octokit/webhooks";
+import { Branch } from "./interfaces/branch";
+import { Repository } from "./interfaces/repository";
+import { PullRequest } from "./interfaces/pullrequest";
 dotenv.config();
 
 const qualityGateEventEmitter = new EventEmitter();
@@ -22,12 +19,12 @@ export enum ProjectType {
 }
 
 export async function determineProjectType(
-  context:
-    | Context<Webhooks.WebhookPayloadPush>
-    | Context<Webhooks.WebhookPayloadPullRequest>
+  // @ts-ignore
+  context: Context,
+  repository: Repository
 ): Promise<ProjectType> {
-  const lang = context.payload.repository.language;
-  const repoName = getters.getRepoName(context.payload);
+  const lang = repository.language;
+  const repoName = repository.name;
 
   if (repoName.toLowerCase().includes("java")) {
     return ProjectType.JAVA;
@@ -39,24 +36,25 @@ export async function determineProjectType(
 }
 
 export function startSonarQubeScan(
-  context: Context<Webhooks.WebhookPayloadPush>
+  context: Context,
+  repository: Repository,
+  branch: Branch
 ) {
-  setCommitStatus(context, "pending");
+  setCommitStatus(context, repository, branch.sha, "pending");
 
-  const projectKey = generateProjectKey(context);
-  const projectName = getters.getRepoName(context.payload);
-  const gitHubRepoUrl = getters.getCloneUrl(context.payload);
-  const branch = getters.getBranch(context.payload);
+  const projectKey = generateProjectKey(repository);
+  const projectName = repository.name;
+  const gitHubRepoUrl = repository.cloneUrl;
 
   ensureProjectExists(
     projectKey,
     projectName,
-    generateSonarQubeProjectSettingsForGithubAssociation(context.payload)
+    generateSonarQubeProjectSettingsForGithubAssociation(repository)
   ).then((success) => {
     if (success) {
       startSonarQubeScanViaJenkins(
         gitHubRepoUrl,
-        branch,
+        branch.name,
         projectKey,
         (err, data) => {
           if (!err) {
@@ -71,14 +69,15 @@ export function startSonarQubeScan(
 }
 
 export function startSonarQubePRAnalyzis(
-  context: Context<Webhooks.WebhookPayloadPullRequest>
+  context: Context,
+  pullrequest: PullRequest
 ) {
-  const projectKey = generateProjectKey(context);
-  const projectName = getters.getRepoName(context.payload);
-  const gitHubRepoUrl = getters.getCloneUrl(context.payload);
-  const baseBranch = getters.getBaseBranch(context.payload);
-  const headBranch = getters.getHeadBranch(context.payload);
-  const pullRequestNumber = getters.getPullRequestNumber(context.payload);
+  const projectKey = generateProjectKey(pullrequest.repository);
+  const projectName = pullrequest.repository.name;
+  const gitHubRepoUrl = pullrequest.repository.cloneUrl;
+  const baseBranch = pullrequest.base_branch;
+  const headBranch = pullrequest.head_branch;
+  const pullRequestNumber = pullrequest.number.toString();
 
   console.log("Obtained details");
   ensureProjectExists(
@@ -117,62 +116,55 @@ export function updateQualityGateStatus(payload: any) {
 }
 
 export function setCommitStatus(
-  payloadContext: Context<Webhooks.WebhookPayloadPush>,
+  payloadContext: Context,
+  repository: Repository,
+  sha: string,
   commitStatus: "error" | "failure" | "pending" | "success",
   targetUrl?: string
 ) {
   console.log("setCommitStatusExectution");
 
-  const sha = getters.getCommitSha(payloadContext.payload);
   const state = commitStatus;
   const description = "Code quality status of this revision of the branch";
   const context = "BranchCodeQuality";
   const target_url = targetUrl;
 
-  const payload = payloadContext.repo({
+  const payload = {
+    repo: repository.name,
+    owner: repository.owner,
     sha,
     state,
     description,
     context,
     target_url,
-  });
+  };
 
   console.log(payload);
   payloadContext.github.repos.createStatus(payload);
 }
 
-export function addWebhookEventListeners(
-  context: Context<Webhooks.WebhookPayloadPush>
-) {
-  const sha = getters.getCommitSha(context.payload);
-
-  qualityGateEventEmitter.once(`${sha}_success`, (targetUrl) => {
-    setCommitStatus(context, "success", targetUrl);
+export function addWebhookEventListeners(context: Context, repository: Repository, sha: string) {
+  qualityGateEventEmitter.once(`${sha}_success`, (targetUrl: string) => {
+    setCommitStatus(context, repository, sha, "success", targetUrl);
   });
 
-  qualityGateEventEmitter.once(`${sha}_failure`, (target_url) => {
-    setCommitStatus(context, "failure", target_url);
+  qualityGateEventEmitter.once(`${sha}_failure`, (target_url: string) => {
+    setCommitStatus(context, repository, sha, "failure", target_url);
   });
 }
 
-function generateProjectKey(
-  context:
-    | Context<Webhooks.WebhookPayloadPush>
-    | Context<Webhooks.WebhookPayloadPullRequest>
-) {
-  return getters.getRepoName(context.payload).trim();
+function generateProjectKey(repository: Repository) {
+  return repository.name.trim();
 }
 
 function generateSonarQubeProjectSettingsForGithubAssociation(
-  contextPayload: WebhookPayloadPush | WebhookPayloadPullRequest
+  repository: Repository
 ) {
   return [
     { key: "sonar.pullrequest.provider", value: "Github" },
     {
       key: "sonar.pullrequest.github.repository",
-      value: `${getters.getOwner(contextPayload)}/${getters.getRepoName(
-        contextPayload
-      )}`,
+      value: `${repository.owner}/${repository.name}`,
     },
   ];
 }
