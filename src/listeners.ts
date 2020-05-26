@@ -97,6 +97,9 @@ export async function onInstallation(
 
               utils.addWebhookEventListeners(context, repository, branch.sha);
               utils.startSonarQubeScan(context, repository, branch);
+              // @ts-ignore
+            }).catch(err => {
+              console.log(`Repo ${repository.name} probably doesn't have dev_protected branch.`);
             });
         }
       });

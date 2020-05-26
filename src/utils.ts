@@ -26,10 +26,40 @@ export async function determineProjectType(
   const lang = repository.language;
   const repoName = repository.name;
 
-  if (repoName.toLowerCase().includes("java")) {
+  if (
+    repoName.toLowerCase().includes("java") &&
+    !repoName.toLowerCase().includes("javascript")
+  ) {
     return ProjectType.JAVA;
-  } else if (lang?.toLowerCase().includes("java")) {
+  } else if (
+    lang?.toLowerCase().includes("java") &&
+    !lang?.toLowerCase().includes("javascript")
+  ) {
     return ProjectType.JAVA;
+  } else {
+    try {
+      const { data: languagList } = await context.github.repos.listLanguages({
+        owner: repository.owner,
+        repo: repoName,
+      });
+
+      if (languagList.hasOwnProperty("Java")) return ProjectType.JAVA;
+      else {
+        const { data: content } = await context.github.repos.getContents({
+          owner: repository.owner,
+          repo: repoName,
+          path: "pom.xml",
+          ref: "dev_protected",
+        });
+
+        // @ts-ignore
+        const buff = new Buffer(content.content, content.encoding);
+        if (buff.toString("ascii").includes("java.version"))
+          return ProjectType.JAVA;
+      }
+    } catch (err) {
+      return ProjectType.NOTJAVA;
+    }
   }
 
   return ProjectType.NOTJAVA;
@@ -143,7 +173,11 @@ export function setCommitStatus(
   payloadContext.github.repos.createStatus(payload);
 }
 
-export function addWebhookEventListeners(context: Context, repository: Repository, sha: string) {
+export function addWebhookEventListeners(
+  context: Context,
+  repository: Repository,
+  sha: string
+) {
   qualityGateEventEmitter.once(`${sha}_success`, (targetUrl: string) => {
     setCommitStatus(context, repository, sha, "success", targetUrl);
   });
