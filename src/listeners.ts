@@ -110,3 +110,9 @@ export function onSonarQubeWebhook(req: Request, res: Response) {
   utils.updateQualityGateStatus(req.body);
   res.sendStatus(200);
 }
+
+// @ts-ignore
+export function onJenkinsWebhook(req: Request, res: Response) {
+  console.log(req.body);
+  res.sendStatus(200);
+}
