@@ -21,7 +21,8 @@ export enum ProjectType {
 export async function determineProjectType(
   // @ts-ignore
   context: Context,
-  repository: Repository
+  repository: Repository,
+  branch?: string,
 ): Promise<ProjectType> {
   const repoName = repository.name;
   try {
@@ -29,7 +30,7 @@ export async function determineProjectType(
         owner: repository.owner,
         repo: repoName,
         path: "pom.xml",
-        ref: "dev_protected",
+        ref: branch ? branch : "dev_protected",
       });
 
       // @ts-ignore

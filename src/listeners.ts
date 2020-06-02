@@ -16,8 +16,9 @@ export async function onPush(context: Context<Webhooks.WebhookPayloadPush>) {
     language: context.payload.repository.language,
   };
 
+  const branch = context.payload.ref.split('/')[2];
   utils
-    .determineProjectType(context, repository)
+    .determineProjectType(context, repository, branch)
     .then((projectType: utils.ProjectType) => {
       if (projectType == utils.ProjectType.JAVA) {
         console.log("insideProjectTypeJava");
