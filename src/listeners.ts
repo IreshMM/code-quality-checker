@@ -5,6 +5,7 @@ import { Request, Response } from "express";
 import { Repository } from "./interfaces/repository";
 import { Branch } from "./interfaces/branch";
 import { PullRequest } from "./interfaces/pullrequest";
+import { QualityGateEventPayload } from "./interfaces/qualitygateeventpayload";
 
 export async function onPush(context: Context<Webhooks.WebhookPayloadPush>) {
   console.log("onPushExecution");
@@ -98,8 +99,11 @@ export async function onInstallation(
               utils.addWebhookEventListeners(context, repository, branch.sha);
               utils.startSonarQubeScan(context, repository, branch);
               // @ts-ignore
-            }).catch(err => {
-              console.log(`Repo ${repository.name} probably doesn't have dev_protected branch.`);
+            })
+            .catch((err) => {
+              console.log(
+                `Repo ${repository.name} probably doesn't have dev_protected branch.`
+              );
             });
         }
       });
@@ -107,11 +111,16 @@ export async function onInstallation(
 }
 
 export function onSonarQubeWebhook(req: Request, res: Response) {
-  utils.updateQualityGateStatus(req.body);
+  const eventPayload: QualityGateEventPayload = {
+    commit: req.body.revision,
+    status: req.body.qualityGate.status == "OK" ? "success" : "failure",
+    description: "Code quality status of this revision of the branch",
+    targetUrl: req.body.branch.url,
+  };
+  utils.updateQualityGateStatus(eventPayload);
   res.sendStatus(200);
 }
 
-// @ts-ignore
 export function onJenkinsWebhook(req: Request, res: Response) {
   console.log(req.body);
   res.sendStatus(200);
