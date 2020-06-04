@@ -98,8 +98,8 @@ export async function onInstallation(
 
               utils.addWebhookEventListeners(context, repository, branch.sha);
               utils.startSonarQubeScan(context, repository, branch);
-              // @ts-ignore
             })
+            // @ts-ignore
             .catch((err) => {
               console.log(
                 `Repo ${repository.name} probably doesn't have dev_protected branch.`
@@ -122,6 +122,17 @@ export function onSonarQubeWebhook(req: Request, res: Response) {
 }
 
 export function onJenkinsWebhook(req: Request, res: Response) {
+  console.log(req.body.status);
+  if (req.body.status == "failure") {
+    console.log("Inside failure");
+    const eventPayload: QualityGateEventPayload = {
+      commit: req.body.git_commit,
+      description: "Jenkins SonarQube Trigger: Build Failed",
+      status: "error",
+      targetUrl: `${req.body.build_url}/console`,
+    };
+    utils.updateQualityGateStatus(eventPayload);
+  }
   console.log(req.body);
   res.sendStatus(200);
 }
