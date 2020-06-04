@@ -9,6 +9,7 @@ import {
 import { Branch } from "./interfaces/branch";
 import { Repository } from "./interfaces/repository";
 import { PullRequest } from "./interfaces/pullrequest";
+import { QualityGateEventPayload } from "./interfaces/qualitygateeventpayload";
 dotenv.config();
 
 const qualityGateEventEmitter = new EventEmitter();
@@ -22,23 +23,23 @@ export async function determineProjectType(
   // @ts-ignore
   context: Context,
   repository: Repository,
-  branch?: string,
+  branch?: string
 ): Promise<ProjectType> {
   const repoName = repository.name;
   try {
-      const { data: content } = await context.github.repos.getContents({
-        owner: repository.owner,
-        repo: repoName,
-        path: "pom.xml",
-        ref: branch ? branch : "dev_protected",
-      });
+    const { data: content } = await context.github.repos.getContents({
+      owner: repository.owner,
+      repo: repoName,
+      path: "pom.xml",
+      ref: branch ? branch : "dev_protected",
+    });
 
-      // @ts-ignore
-      const buff = new Buffer(content.content, content.encoding);
-      if (buff.toString("ascii").includes("java.version")) {
-        console.log(`Repo ${repoName} is identified as JAVA`);
-        return ProjectType.JAVA;
-      }
+    // @ts-ignore
+    const buff = new Buffer(content.content, content.encoding);
+    if (buff.toString("ascii").includes("java.version")) {
+      console.log(`Repo ${repoName} is identified as JAVA`);
+      return ProjectType.JAVA;
+    }
   } catch (err) {
     return ProjectType.NOTJAVA;
   }
@@ -51,7 +52,13 @@ export function startSonarQubeScan(
   repository: Repository,
   branch: Branch
 ) {
-  setCommitStatus(context, repository, branch.sha, "pending");
+  setCommitStatus(
+    context,
+    repository,
+    branch.sha,
+    "pending",
+    "Code quality status of this revision of the branch"
+  );
 
   const projectKey = generateProjectKey(repository);
   const projectName = repository.name;
@@ -115,15 +122,8 @@ export function startSonarQubePRAnalyzis(
   });
 }
 
-export function updateQualityGateStatus(payload: any) {
-  const sha = payload.revision;
-  const qualityGateStatus = payload.qualityGate.status;
-  const targetUrl = payload.branch.url;
-  if (qualityGateStatus == "OK") {
-    qualityGateEventEmitter.emit(`${sha}_success`, targetUrl);
-  } else {
-    qualityGateEventEmitter.emit(`${sha}_failure`, targetUrl);
-  }
+export function updateQualityGateStatus(payload: QualityGateEventPayload) {
+  qualityGateEventEmitter.emit(payload.commit, payload);
 }
 
 export function setCommitStatus(
@@ -131,12 +131,12 @@ export function setCommitStatus(
   repository: Repository,
   sha: string,
   commitStatus: "error" | "failure" | "pending" | "success",
+  description: string,
   targetUrl?: string
 ) {
   console.log("setCommitStatusExectution");
 
   const state = commitStatus;
-  const description = "Code quality status of this revision of the branch";
   const context = "BranchCodeQuality";
   const target_url = targetUrl;
 
@@ -159,12 +159,15 @@ export function addWebhookEventListeners(
   repository: Repository,
   sha: string
 ) {
-  qualityGateEventEmitter.once(`${sha}_success`, (targetUrl: string) => {
-    setCommitStatus(context, repository, sha, "success", targetUrl);
-  });
-
-  qualityGateEventEmitter.once(`${sha}_failure`, (target_url: string) => {
-    setCommitStatus(context, repository, sha, "failure", target_url);
+  qualityGateEventEmitter.once(sha, (payload: QualityGateEventPayload) => {
+    setCommitStatus(
+      context,
+      repository,
+      sha,
+      payload.status,
+      payload.description,
+      payload.targetUrl
+    );
   });
 }
 

@@ -1,5 +1,5 @@
-<?xml version='1.1' encoding='UTF-8'?>
-<flow-definition plugin="workflow-job@2.38">
+xml <?xml version='1.1' encoding='UTF-8'?>
+<flow-definition plugin="workflow-job@2.39">
     <actions>
         <org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobAction plugin="pipeline-model-definition@1.6.0"/>
         <org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction plugin="pipeline-model-definition@1.6.0">
@@ -42,14 +42,16 @@
         </hudson.model.ParametersDefinitionProperty>
     </properties>
     <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@2.80">
-        <script>
+        <script>                def scmvars
                 pipeline {
                     agent any
 
                     stages {
                         stage(&apos;Checkout Code&apos;) {
                             steps {
-                                checkout([$class: &apos;GitSCM&apos;, branches: [[name: &quot;*/${params.branch}&quot;]], doGenerateSubmoduleConfigurations: false, extensions: [[$class: &apos;CloneOption&apos;, noTags: true, reference: &apos;&apos;, shallow: false]], submoduleCfg: [], userRemoteConfigs: [[credentialsId: &apos;GitHub account for Nable&apos;, url: params.gitHubRepoUrl]]])
+                                script {
+                                    scmvars = checkout([$class: &apos;GitSCM&apos;, branches: [[name: &quot;*/${params.branch}&quot;]], doGenerateSubmoduleConfigurations: false, extensions: [[$class: &apos;CloneOption&apos;, noTags: true, reference: &apos;&apos;, shallow: false]], submoduleCfg: [], userRemoteConfigs: [[credentialsId: &apos;GITHUB_LOGIN&apos;, url: params.gitHubRepoUrl]]])
+                                }
                             }
                         }
                         
@@ -64,6 +66,23 @@
                                     sh &quot;mvn clean compile sonar:sonar -Dsonar.host.url=${params.sonarHostUrl} -Dsonar.login=$SONAR_LOGIN -Dsonar.projectKey=${params.sonarProjectKey} -Dsonar.branch.name=${params.branch} -Dmaven.test.skip=true&quot;
                                 } 
                         }
+                    }
+                    post {
+                        always {
+                            httpRequest acceptType: &apos;TEXT_PLAIN&apos;, consoleLogResponseBody: true, contentType: &apos;APPLICATION_JSON&apos;, httpMode: &apos;POST&apos;, requestBody: &quot;{\&quot; git_commit\&quot;:\&quot;${scmvars.GIT_COMMIT}\&quot;, \&quot;build_url\&quot;:\&quot;${env.BUILD_URL}\&quot;, \&quot;status\&quot;: \&quot;finished\&quot;}&quot;, responseHandle: &apos;NONE&apos;, timeout: 10, url: &apos;http://cqcheckerhost:3000/webhooks/jenkins&apos;, wrapAsMultipart: false, validResponseCodes: &apos;100:500&apos;
+                            deleteDir() /* clean up our workspace */
+                        }
+                        success {
+                            httpRequest acceptType: &apos;TEXT_PLAIN&apos;, consoleLogResponseBody: true, contentType: &apos;APPLICATION_JSON&apos;, httpMode: &apos;POST&apos;, requestBody: &quot;{\&quot;git_commit\&quot;:\&quot;${scmvars.GIT_COMMIT}\&quot;, \&quot;build_url\&quot;:\&quot;${env.BUILD_URL}\&quot;, \&quot;status\&quot;: \&quot;success\&quot;}&quot;, responseHandle: &apos;NONE&apos;, timeout: 10, url: &apos;http://cqcheckerhost:3000/webhooks/jenkins&apos;, wrapAsMultipart: false, validResponseCodes: &apos;100:500&apos;
+                        }
+                        unstable {
+                            httpRequest acceptType: &apos;TEXT_PLAIN&apos;, consoleLogResponseBody: true, contentType: &apos;APPLICATION_JSON&apos;, httpMode: &apos;POST&apos;, requestBody: &quot;{\&quot;git_commit\&quot;:\&quot;${scmvars.GIT_COMMIT}\&quot;, \&quot;build_url\&quot;:\&quot;${env.BUILD_URL}\&quot;, \&quot;status\&quot;: \&quot;unstable\&quot;}&quot;, responseHandle: &apos;NONE&apos;, timeout: 10, url: &apos;http://cqcheckerhost:3000/webhooks/jenkins&apos;, wrapAsMultipart: false, validResponseCodes: &apos;100:500&apos;
+                        }
+                        failure {
+                            httpRequest acceptType: &apos;TEXT_PLAIN&apos;, consoleLogResponseBody: true, contentType: &apos;APPLICATION_JSON&apos;, httpMode: &apos;POST&apos;, requestBody: &quot;{\&quot;git_commit\&quot;:\&quot;${scmvars.GIT_COMMIT}\&quot;, \&quot;build_url\&quot;:\&quot;${env.BUILD_URL}\&quot;, \&quot;status\&quot;: \&quot;failure\&quot;}&quot;, responseHandle: &apos;NONE&apos;, timeout: 10, url: &apos;http://cqcheckerhost:3000/webhooks/jenkins&apos;, wrapAsMultipart: false, validResponseCodes: &apos;100:500&apos;
+                            echo &apos;I failed :(&apos;
+                        }
+                        
                     }
                 }
         </script>
