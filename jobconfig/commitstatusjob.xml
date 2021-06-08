@@ -35,7 +35,7 @@ xml <?xml version='1.1' encoding='UTF-8'?>
                 <hudson.model.StringParameterDefinition>
                     <name>sonarHostUrl</name>
                     <description>URL of the sonarqube instance</description>
-                    <defaultValue>http://sonarqube:9000</defaultValue>
+                    <defaultValue>http://sonarqube:9000/sonarqube</defaultValue>
                     <trim>false</trim>
                 </hudson.model.StringParameterDefinition>
             </parameterDefinitions>
