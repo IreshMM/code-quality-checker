@@ -35,7 +35,7 @@
                 <hudson.model.StringParameterDefinition>
                     <name>sonarHostUrl</name>
                     <description>URL of the sonarqube instance</description>
-                    <defaultValue>http://sonarqube:9000/sonarqube</defaultValue>
+                    <defaultValue>http://sonarqube:9000/</defaultValue>
                     <trim>false</trim>
                 </hudson.model.StringParameterDefinition>
             </parameterDefinitions>
@@ -69,17 +69,17 @@
                     }
                     post {
                         always {
-                            httpRequest acceptType: &apos;TEXT_PLAIN&apos;, consoleLogResponseBody: true, contentType: &apos;APPLICATION_JSON&apos;, httpMode: &apos;POST&apos;, requestBody: &quot;{\&quot; git_commit\&quot;:\&quot;${scmvars.GIT_COMMIT}\&quot;, \&quot;build_url\&quot;:\&quot;${env.BUILD_URL}\&quot;, \&quot;status\&quot;: \&quot;finished\&quot;}&quot;, responseHandle: &apos;NONE&apos;, timeout: 10, url: &apos;http://cqcheckerhost:3000/webhooks/jenkins&apos;, wrapAsMultipart: false, validResponseCodes: &apos;100:500&apos;
+                            httpRequest acceptType: &apos;TEXT_PLAIN&apos;, consoleLogResponseBody: true, contentType: &apos;APPLICATION_JSON&apos;, httpMode: &apos;POST&apos;, requestBody: &quot;{\&quot; git_commit\&quot;:\&quot;${scmvars.GIT_COMMIT}\&quot;, \&quot;build_url\&quot;:\&quot;${env.BUILD_URL}\&quot;, \&quot;status\&quot;: \&quot;finished\&quot;}&quot;, responseHandle: &apos;NONE&apos;, timeout: 10, url: &apos;http://cqchecker:3000/webhooks/jenkins&apos;, wrapAsMultipart: false, validResponseCodes: &apos;100:500&apos;
                             deleteDir() /* clean up our workspace */
                         }
                         success {
-                            httpRequest acceptType: &apos;TEXT_PLAIN&apos;, consoleLogResponseBody: true, contentType: &apos;APPLICATION_JSON&apos;, httpMode: &apos;POST&apos;, requestBody: &quot;{\&quot;git_commit\&quot;:\&quot;${scmvars.GIT_COMMIT}\&quot;, \&quot;build_url\&quot;:\&quot;${env.BUILD_URL}\&quot;, \&quot;status\&quot;: \&quot;success\&quot;}&quot;, responseHandle: &apos;NONE&apos;, timeout: 10, url: &apos;http://cqcheckerhost:3000/webhooks/jenkins&apos;, wrapAsMultipart: false, validResponseCodes: &apos;100:500&apos;
+                            httpRequest acceptType: &apos;TEXT_PLAIN&apos;, consoleLogResponseBody: true, contentType: &apos;APPLICATION_JSON&apos;, httpMode: &apos;POST&apos;, requestBody: &quot;{\&quot;git_commit\&quot;:\&quot;${scmvars.GIT_COMMIT}\&quot;, \&quot;build_url\&quot;:\&quot;${env.BUILD_URL}\&quot;, \&quot;status\&quot;: \&quot;success\&quot;}&quot;, responseHandle: &apos;NONE&apos;, timeout: 10, url: &apos;http://cqchecker:3000/webhooks/jenkins&apos;, wrapAsMultipart: false, validResponseCodes: &apos;100:500&apos;
                         }
                         unstable {
-                            httpRequest acceptType: &apos;TEXT_PLAIN&apos;, consoleLogResponseBody: true, contentType: &apos;APPLICATION_JSON&apos;, httpMode: &apos;POST&apos;, requestBody: &quot;{\&quot;git_commit\&quot;:\&quot;${scmvars.GIT_COMMIT}\&quot;, \&quot;build_url\&quot;:\&quot;${env.BUILD_URL}\&quot;, \&quot;status\&quot;: \&quot;unstable\&quot;}&quot;, responseHandle: &apos;NONE&apos;, timeout: 10, url: &apos;http://cqcheckerhost:3000/webhooks/jenkins&apos;, wrapAsMultipart: false, validResponseCodes: &apos;100:500&apos;
+                            httpRequest acceptType: &apos;TEXT_PLAIN&apos;, consoleLogResponseBody: true, contentType: &apos;APPLICATION_JSON&apos;, httpMode: &apos;POST&apos;, requestBody: &quot;{\&quot;git_commit\&quot;:\&quot;${scmvars.GIT_COMMIT}\&quot;, \&quot;build_url\&quot;:\&quot;${env.BUILD_URL}\&quot;, \&quot;status\&quot;: \&quot;unstable\&quot;}&quot;, responseHandle: &apos;NONE&apos;, timeout: 10, url: &apos;http://cqchecker:3000/webhooks/jenkins&apos;, wrapAsMultipart: false, validResponseCodes: &apos;100:500&apos;
                         }
                         failure {
-                            httpRequest acceptType: &apos;TEXT_PLAIN&apos;, consoleLogResponseBody: true, contentType: &apos;APPLICATION_JSON&apos;, httpMode: &apos;POST&apos;, requestBody: &quot;{\&quot;git_commit\&quot;:\&quot;${scmvars.GIT_COMMIT}\&quot;, \&quot;build_url\&quot;:\&quot;${env.BUILD_URL}\&quot;, \&quot;status\&quot;: \&quot;failure\&quot;}&quot;, responseHandle: &apos;NONE&apos;, timeout: 10, url: &apos;http://cqcheckerhost:3000/webhooks/jenkins&apos;, wrapAsMultipart: false, validResponseCodes: &apos;100:500&apos;
+                            httpRequest acceptType: &apos;TEXT_PLAIN&apos;, consoleLogResponseBody: true, contentType: &apos;APPLICATION_JSON&apos;, httpMode: &apos;POST&apos;, requestBody: &quot;{\&quot;git_commit\&quot;:\&quot;${scmvars.GIT_COMMIT}\&quot;, \&quot;build_url\&quot;:\&quot;${env.BUILD_URL}\&quot;, \&quot;status\&quot;: \&quot;failure\&quot;}&quot;, responseHandle: &apos;NONE&apos;, timeout: 10, url: &apos;http://cqchecker:3000/webhooks/jenkins&apos;, wrapAsMultipart: false, validResponseCodes: &apos;100:500&apos;
                             echo &apos;I failed :(&apos;
                         }
                         
