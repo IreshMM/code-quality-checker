@@ -26,6 +26,11 @@ export async function determineProjectType(
   branch?: string
 ): Promise<ProjectType> {
   const repoName = repository.name;
+
+  if (repoName.toLowerCase().includes("java")) {
+    return ProjectType.JAVA;
+  }
+
   try {
     const { data: content } = await context.github.repos.getContents({
       owner: repository.owner,
