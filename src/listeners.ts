@@ -6,6 +6,7 @@ import { Repository } from "./interfaces/repository";
 import { Branch } from "./interfaces/branch";
 import { PullRequest } from "./interfaces/pullrequest";
 import { QualityGateEventPayload } from "./interfaces/qualitygateeventpayload";
+import { addWebHookIfNotExists } from "./sonarapi";
 
 export async function onPush(context: Context<Webhooks.WebhookPayloadPush>) {
   console.log("onPushExecution");
@@ -63,10 +64,12 @@ export async function onPullRequest(
     });
 }
 
+// This is triggered when the app is first installed on an organization
 export async function onInstallation(
   context: Context<Webhooks.WebhookPayloadInstallation>
 ) {
   const repositories = context.payload.repositories;
+  await addWebHookIfNotExists();
 
   for (let i = 0; i < repositories.length; i++) {
     const repo = repositories[i];
