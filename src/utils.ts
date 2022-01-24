@@ -155,7 +155,6 @@ export function setCommitStatus(
     target_url,
   };
 
-  console.log(payload);
   payloadContext.github.repos.createStatus(payload);
 }
 
