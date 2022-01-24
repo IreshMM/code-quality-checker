@@ -1,10 +1,17 @@
-FROM node:12-slim
+FROM node:12-slim AS build
 WORKDIR /usr/app
 RUN apt update && apt install -y python3 build-essential
 COPY package.json package-lock.json ./
+RUN npm install
+COPY . .
+RUN npm run build
 RUN npm ci --production
 RUN npm cache clean --force
-ENV NODE_ENV="production"
-COPY lib ./lib
+
+FROM node:12-slim
+WORKDIR /usr/app
+COPY --from=build /usr/app/lib ./lib
+COPY --from=build /usr/app/node_modules ./node_modules
 COPY jobconfig ./jobconfig
-CMD [ "npm", "start" ]
+ENV NODE_ENV="production"
+CMD [ "./node_modules/.bin/probot", "run", "./lib/index.js"]
